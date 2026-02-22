@@ -1,16 +1,63 @@
 {{ define "content" }}
+<style>
+  [x-cloak] {
+    display: none !important;
+  }
+  .login-card-shadow {
+    box-shadow:
+      0 20px 25px -5px rgba(249, 115, 22, 0.1),
+      0 8px 10px -6px rgba(249, 115, 22, 0.1);
+  }
+  .login-card-shadow:hover {
+    box-shadow: 0 25px 50px -12px rgba(249, 115, 22, 0.15);
+  }
+  .login-btn-gradient {
+    background: linear-gradient(to right, #f97316, #d97706);
+  }
+  .login-btn-gradient:hover {
+    background: linear-gradient(to right, #ea580c, #b45309);
+  }
+  .input-ring-focus:focus {
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+    border-color: #f97316;
+  }
+  .group:focus-within .icon-focus {
+    color: #f97316;
+  }
+</style>
+
 <div
   x-data="loginForm()"
-  class="w-full max-w-sm space-y-6 rounded-2xl border border-orange-100 bg-white p-8 shadow-lg shadow-orange-500/10"
+  class="w-full max-w-md space-y-8 rounded-2xl border border-gray-100 bg-white p-10 login-card-shadow transition-all duration-300"
 >
-  <div class="space-y-1 text-center">
-    <h2 class="text-xl font-semibold tracking-tight text-gray-900">Log in</h2>
-    <p class="text-sm text-gray-500">Enter your credentials to continue.</p>
+  <div class="text-center space-y-2">
+    <div
+      class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600 mb-4"
+    >
+      <svg
+        class="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+        />
+      </svg>
+    </div>
+    <h2 class="text-3xl font-bold tracking-tight text-gray-900">
+      Welcome back
+    </h2>
+    <p class="text-sm text-gray-500">Please enter your details to sign in.</p>
   </div>
 
   {{ if .error }}
   <div
-    class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+    x-transition
+    class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-pulse"
   >
     <svg
       class="h-5 w-5 flex-shrink-0 text-red-500"
@@ -25,22 +72,23 @@
         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
       />
     </svg>
-    <span
+    <span class="font-medium"
       >{{ if .error.Message }}{{ .error.Message }}{{ else }}Invalid {{
       .error.Field }}{{ end }}</span
     >
   </div>
   {{ end }}
 
-  <form method="POST" action="/login" class="space-y-4">
-    <div class="space-y-1">
-      <label class="text-sm font-medium text-gray-700">Email</label>
-      <div class="relative">
+  <form method="POST" action="/login" class="space-y-6" @submit="submit">
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-gray-700">Email address</label>
+      <div class="relative group">
         <div
-          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 transition-colors duration-200 icon-focus"
+          :class="touched.email && !emailValid ? 'text-red-400' : 'text-gray-400'"
         >
           <svg
-            class="h-5 w-5 text-gray-400"
+            class="h-5 w-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -57,13 +105,13 @@
           type="email"
           name="email"
           required
-          placeholder="your@email.com"
-          class="w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2"
+          placeholder="Enter your email"
+          class="w-full rounded-xl border py-3 pl-10 pr-4 text-sm transition-all duration-200 focus:outline-none input-ring-focus placeholder-gray-400"
           x-model="email"
           x-on:blur="touched.email = true"
           :class="touched.email && !emailValid
-                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20'
-                        : 'border-orange-200 bg-white focus:border-orange-500 focus:ring-orange-500/20'"
+                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/10'
+                        : 'border-gray-200 bg-gray-50 focus:bg-white hover:border-orange-300'"
         />
       </div>
       <p
@@ -71,7 +119,7 @@
         x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 -translate-y-1"
         x-transition:enter-end="opacity-100 translate-y-0"
-        class="mt-1 flex items-center gap-1 text-xs text-red-600"
+        class="flex items-center gap-1 text-xs font-medium text-red-600 pl-1"
       >
         <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -80,18 +128,26 @@
             clip-rule="evenodd"
           />
         </svg>
-        Enter a valid email address
+        Please enter a valid email address
       </p>
     </div>
 
-    <div class="space-y-1">
-      <label class="text-sm font-medium text-gray-700">Password</label>
-      <div class="relative">
+    <div class="space-y-2">
+      <div class="flex items-center justify-between">
+        <label class="text-sm font-medium text-gray-700">Password</label>
+        <a
+          href="/recuperar-senha"
+          class="text-xs font-medium text-orange-600 hover:text-orange-700 hover:underline transition-colors duration-200"
+          >Forgot password?</a
+        >
+      </div>
+      <div class="relative group">
         <div
-          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 transition-colors duration-200 icon-focus"
+          :class="touched.password && !passwordValid ? 'text-red-400' : 'text-gray-400'"
         >
           <svg
-            class="h-5 w-5 text-gray-400"
+            class="h-5 w-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -109,12 +165,12 @@
           name="password"
           required
           placeholder="••••••••"
-          class="w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2"
+          class="w-full rounded-xl border py-3 pl-10 pr-4 text-sm transition-all duration-200 focus:outline-none input-ring-focus placeholder-gray-400"
           x-model="password"
           x-on:blur="touched.password = true"
           :class="touched.password && !passwordValid
-                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20'
-                        : 'border-orange-200 bg-white focus:border-orange-500 focus:ring-orange-500/20'"
+                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/10'
+                        : 'border-gray-200 bg-gray-50 focus:bg-white hover:border-orange-300'"
         />
       </div>
       <p
@@ -122,7 +178,7 @@
         x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 -translate-y-1"
         x-transition:enter-end="opacity-100 translate-y-0"
-        class="mt-1 flex items-center gap-1 text-xs text-red-600"
+        class="flex items-center gap-1 text-xs font-medium text-red-600 pl-1"
       >
         <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -139,12 +195,16 @@
 
     <button
       type="submit"
-      class="w-full rounded-lg bg-orange-600 py-2.5 text-sm font-medium text-white shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-      :disabled="!formValid"
+      class="group relative w-full overflow-hidden rounded-xl login-btn-gradient py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70 disabled:shadow-none"
+      :disabled="!formValid || loading"
     >
-      <span class="flex items-center justify-center gap-2">
+      <span
+        class="relative flex items-center justify-center gap-2"
+        x-show="!loading"
+      >
+        Sign in
         <svg
-          class="h-4 w-4"
+          class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -153,17 +213,44 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+            d="M14 5l7 7m0 0l-7 7m7-7H3"
           />
         </svg>
-        Sign in
+      </span>
+      <span
+        class="absolute inset-0 flex items-center justify-center gap-2"
+        x-show="loading"
+        x-cloak
+      >
+        <svg
+          class="h-5 w-5 animate-spin text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        Signing in...
       </span>
     </button>
   </form>
 
-  <div class="pt-2 text-center">
-    <p class="text-xs text-gray-500">
-      Powered by <span class="font-medium text-orange-600">Gin alpine</span>
+  <div class="pt-4 text-center">
+    <p class="text-xs text-gray-400">
+      Protected by reCAPTCHA and subject to the Privacy Policy and Terms of
+      Service.
     </p>
   </div>
 </div>
@@ -173,6 +260,7 @@
     return {
       email: "",
       password: "",
+      loading: false,
       touched: {
         email: false,
         password: false,
@@ -191,12 +279,13 @@
       },
 
       submit(event) {
-        this.touched.email = true;
-        this.touched.password = true;
-
-        if (!this.formValid) return;
-
-        event.target.submit();
+        if (!this.formValid) {
+          event.preventDefault();
+          this.touched.email = true;
+          this.touched.password = true;
+          return;
+        }
+        this.loading = true;
       },
     };
   }

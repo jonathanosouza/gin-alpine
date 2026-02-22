@@ -1,10 +1,10 @@
+// Package auth
 package auth
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidToken       = errors.New("invalid token")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserDisabled       = errors.New("user disabled")
 )

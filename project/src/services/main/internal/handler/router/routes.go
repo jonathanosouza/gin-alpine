@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"gin-alpine/src/internal/domain/auth"
 	"gin-alpine/src/services/main/internal/bootstrap"
 	"gin-alpine/src/services/main/internal/handler/middleware"
 
@@ -49,19 +50,20 @@ func NewRouter(b *bootstrap.Bootstrap) *gin.Engine {
 		Secure:   b.Config.Env == gin.ReleaseMode, // enable in production (HTTPS)
 	})
 
-	csrfMiddleware := csrf.Middleware(csrf.Options{
-		Secret: b.Config.CSRFSecret,
-		ErrorFunc: func(c *gin.Context) {
-			c.String(http.StatusForbidden, "CSRF token mismatch")
-			c.Abort()
-		},
-	})
-
 	r.Use(sessions.Sessions("session", store))
 	r.Use(middleware.RateLimitMiddleware(b))
 	// Then csrf
-	r.Use(csrfMiddleware)
-	r.Use(middleware.CSRFTpl())
+	if b.Config.Env != gin.TestMode {
+		csrfMiddleware := csrf.Middleware(csrf.Options{
+			Secret: b.Config.CSRFSecret,
+			ErrorFunc: func(c *gin.Context) {
+				c.String(http.StatusForbidden, "CSRF token mismatch")
+				c.Abort()
+			},
+		})
+		r.Use(csrfMiddleware)
+		r.Use(middleware.CSRFTpl())
+	}
 
 	staticFS, err := fs.Sub(web.StaticFiles, "static")
 	if err != nil {
@@ -95,6 +97,10 @@ func NewRouter(b *bootstrap.Bootstrap) *gin.Engine {
 		return gin.H{"Title": "Login"}
 	}))
 	public.POST("/login", b.AuthWebHandler.LoginPostWeb)
+	public.GET("/recuperar-senha", b.AuthWebHandler.ForgotPasswordGet)
+	public.POST("/recuperar-senha", b.AuthWebHandler.ForgotPasswordPost)
+	public.GET("/reset-senha/:uuid", b.AuthWebHandler.ResetPasswordGet)
+	public.POST("/reset-senha/:uuid", b.AuthWebHandler.ResetPasswordPost)
 
 	// PROTECTED ROUTES
 	protected := r.Group("/")
@@ -103,6 +109,28 @@ func NewRouter(b *bootstrap.Bootstrap) *gin.Engine {
 	protected.GET("/", b.Renderer.Page("main", "home", func(c *gin.Context) gin.H {
 		return gin.H{"Title": "Home"}
 	}))
+	protected.GET("/configuracoes", b.Renderer.Page("main", "configuracoes", func(c *gin.Context) gin.H {
+		return gin.H{"Title": "Configurações"}
+	}))
+	protected.GET("/perfil", b.Renderer.Page("main", "perfil", func(c *gin.Context) gin.H {
+		return gin.H{"Title": "Perfil"}
+	}))
+	protected.PUT("/api/users/:id", b.UserWebHandler.UpdateUser)
+	protected.GET("/api/users/:id", b.UserWebHandler.GetUser)
+	protected.GET("/api/users", b.UserWebHandler.ListUsers)
+	protected.GET("/api/users/search", b.UserWebHandler.SearchUsers)
+
+	users := protected.Group("/api/users")
+	users.Use(middleware.RequireRoleAtLeast(auth.RoleManager))
+	{
+		users.POST("/", b.UserWebHandler.CreateUser)
+	}
+
+	adminUsers := protected.Group("/api/users/admin")
+	adminUsers.Use(middleware.RequireAnyRole(auth.RoleAdmin, auth.RoleDev))
+	{
+		adminUsers.PUT("/:id", b.UserWebHandler.UpdateUserAdmin)
+	}
 	// API ROUTES
 	// protected.GET("/api/patterns/:id/draws", b.PatternsHTTPHandler.ListPatternAndDrawsHTTP)
 

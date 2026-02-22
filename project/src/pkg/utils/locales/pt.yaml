@@ -6,6 +6,7 @@ errors:
     expired_token: "Token expirado."
   user:
     duplicate_email: Já existe um usuário com este e-mail.
+    email_already_exists: "Este e-mail já está em uso."
     not_found: Usuário não encontrado.
     name_required: O campo nome é obrigaório
     email_required: O campo email é obrigatório
@@ -15,6 +16,18 @@ errors:
     role_forbidden: "O seu cargo não permite a execução desta ação."
     invalid_role: "O cargo selecionado não existe."
     invalid_credentials: "Senha incorreta."
+    disabled: "Seu perfil está desabilitado. Consulte o administrador do sistema."
+  validation:
+    user:
+      name_required: "O nome é obrigatório"
+      email_required: "O email é obrigatório"
+      email_invalid: "O email é inválido"
+      password_required: "A senha é obrigatória"
+      password_min: "A senha deve ter no mínimo 4 caracteres"
+      role_id_required: "O cargo é obrigatório"
+  custom:
+    user:
+      email_already_exists: "Este e-mail já está em uso."
   update_no_fields: "Nenhum campo para atualizar foi enviado."
   invalid_id: "ID de usuário inválido."
   unauthorized: "Não autorizado."

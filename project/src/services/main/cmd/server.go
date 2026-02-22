@@ -25,11 +25,6 @@ type Server struct {
 
 func NewServer() *Server {
 	b := bootstrap.MustGetBootstrapInstance()
-	if b.Config.Env == "production" {
-		b.Config.Env = gin.ReleaseMode
-	} else {
-		b.Config.Env = gin.DebugMode
-	}
 	b.SetInitialData()
 	router := router.NewRouter(b)
 	addr := fmt.Sprintf(":%s", b.Config.Port)

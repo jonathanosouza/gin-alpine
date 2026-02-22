@@ -14,7 +14,7 @@ import (
 type Querier interface {
 	CheckIfUserHasResetPasswordLinksAvailable(ctx context.Context, arg CheckIfUserHasResetPasswordLinksAvailableParams) (pgtype.UUID, error)
 	CreateLink(ctx context.Context, arg CreateLinkParams) (int32, error)
-	CreateUser(ctx context.Context, arg CreateUserParams) (int32, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAvailableLinks(ctx context.Context, arg CreateUserAvailableLinksParams) (int32, error)
 	DeleteLink(ctx context.Context, arg DeleteLinkParams) error
 	FindRoleByID(ctx context.Context, id int32) (Role, error)
@@ -22,6 +22,7 @@ type Querier interface {
 	FindUserByID(ctx context.Context, id int32) (FindUserByIDRow, error)
 	GetLink(ctx context.Context, argUuid uuid.UUID) (GetLinkRow, error)
 	GetTotalUsers(ctx context.Context) (int64, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUsersWithTotal(ctx context.Context, arg GetUsersWithTotalParams) ([]GetUsersWithTotalRow, error)
 	SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error

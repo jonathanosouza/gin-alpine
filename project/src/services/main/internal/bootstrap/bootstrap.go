@@ -14,6 +14,7 @@ import (
 	"gin-alpine/src/internal/infra/redis"
 	"gin-alpine/src/internal/usecases"
 	authWebHandler "gin-alpine/src/services/main/internal/handler/web/auth"
+	webHandler "gin-alpine/src/services/main/internal/handler/web/user"
 	"gin-alpine/src/services/main/internal/jobs"
 
 	"go.uber.org/zap"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/cache/v9"
+	"github.com/hibiken/asynq"
 	"github.com/robfig/cron/v3"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -32,9 +34,12 @@ type Bootstrap struct {
 	Renderer       *web.Renderer
 	Config         *configs.Config
 	Translator     *utils.Translator
+	DB             *postgres.PgRepository
 	RedisDB        *redis.RedisClient
+	AsynqClient    *asynq.Client
 	RollingLogger  *lumberjack.Logger
 	AuthWebHandler *authWebHandler.AuthHandler
+	UserWebHandler *webHandler.UserHandler
 }
 
 func MustGetBootstrapInstance() *Bootstrap {
@@ -47,31 +52,48 @@ func MustGetBootstrapInstance() *Bootstrap {
 		utils.FatalResult("failed to load sqlite repository", err)
 	}
 	translator := utils.NewTranslator("pt")
-	mode := gin.DebugMode
-	if cfg.Env == "production" {
+	var mode string
+	switch cfg.Env {
+	case "production":
 		mode = gin.ReleaseMode
+	case "development":
+		mode = gin.DebugMode
+	case "test":
+		mode = gin.TestMode
+	default:
+		mode = gin.DebugMode
 	}
+	cfg.Env = mode
 	b := Bootstrap{
 		Config:     cfg,
 		Cron:       cron.New(),
 		Translator: translator,
 		Renderer:   web.NewRenderer(mode),
+		DB:         repo,
 		RedisDB:    redis.NewRedisClient(cfg.RedisURL),
+		AsynqClient: asynq.NewClient(asynq.RedisClientOpt{
+			Addr: cfg.RedisURL,
+		}),
 	}
 	b.setUpLogger()
 	b.setupJobs()
 
 	// REPOSITORIES
 	userRepository := postgres.NewUserRepository(repo)
+	linksRepository := postgres.NewLinksRepository(repo)
 
 	// USECASES
 	authUsecases := usecases.NewAuthUsecases(userRepository)
+	userUsecase := usecases.NewUserUsecase(userRepository)
+	resetUsecase := usecases.NewResetPasswordUsecase(linksRepository, userRepository)
 
 	// HANDLERS
-	authHandler := authWebHandler.NewAuthHandler(authUsecases, b.RedisDB, b.Renderer, b.Logger, translator)
+	authHandler := authWebHandler.NewAuthHandler(authUsecases, resetUsecase, b.RedisDB, b.Renderer, b.Logger, translator, b.AsynqClient)
+	userHandler := webHandler.NewUserHandler(userUsecase, b.RedisDB, translator)
 
 	// set bootstrap handlers
 	b.AuthWebHandler = authHandler
+	b.UserWebHandler = userHandler
 
 	return &b
 }

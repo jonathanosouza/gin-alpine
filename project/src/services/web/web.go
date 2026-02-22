@@ -31,14 +31,14 @@ var TemplateFS embed.FS
 
 type Renderer struct {
 	pages map[string]*template.Template
-	mode  string
+	Mode  string
 	fs    fs.FS
 }
 
 func NewRenderer(mode string) *Renderer {
 	r := &Renderer{
 		pages: make(map[string]*template.Template),
-		mode:  mode,
+		Mode:  mode,
 	}
 	path, err := utils.GetFilePath([]string{"src", "services", "web"})
 	if err != nil {
@@ -53,9 +53,13 @@ func NewRenderer(mode string) *Renderer {
 	r.pages["404"] = r.page("base", "404")
 	r.pages["500"] = r.page("base", "500")
 	r.pages["login"] = r.page("auth", "login")
+	r.pages["forgot-password"] = r.page("auth", "forgot-password")
+	r.pages["reset-password"] = r.page("auth", "reset-password")
 
 	// base layouts
 	r.pages["home"] = r.page("main", "home", r.setExtra()...)
+	r.pages["configuracoes"] = r.page("main", "configuracoes", r.setExtra()...)
+	r.pages["perfil"] = r.page("main", "perfil", r.setExtra()...)
 
 	// extra layouts
 	// r.pages["padroes"] = r.page("main", "padroes",
@@ -117,7 +121,13 @@ func (r *Renderer) Page(
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		data := gin.H{
-			"csrf": csrf.GetToken(c),
+			"env": r.Mode,
+		}
+		if r.Mode != gin.TestMode {
+			data = gin.H{
+				"csrf": csrf.GetToken(c),
+				"env":  r.Mode,
+			}
 		}
 
 		// always inject auth context

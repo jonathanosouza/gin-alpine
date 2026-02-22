@@ -26,6 +26,7 @@ type UpdateUserInput struct {
 	Name     *string
 	Email    *string
 	Password *string
+	Enabled  *bool
 }
 
 type UpdateUserAdminInput struct {

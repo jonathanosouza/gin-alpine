@@ -1,3 +1,4 @@
+// Package usecases
 package usecases
 
 import (
@@ -22,6 +23,10 @@ func (u *AuthUsecases) Login(ctx context.Context, input auth.LoginInput) (*gen.F
 	user, err := u.usersRepo.FindUserByEmail(ctx, input.Email)
 	if err != nil {
 		return nil, users.ErrUserNotFound
+	}
+
+	if !user.Enabled {
+		return nil, auth.ErrUserDisabled
 	}
 
 	err = utils.ValidatePassword(input.Password, user.Password)

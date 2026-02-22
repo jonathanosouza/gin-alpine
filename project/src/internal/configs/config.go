@@ -23,6 +23,8 @@ type Config struct {
 	EmailSenderPass  string
 	EmailSMTP        string
 	SMTPAddress      string
+	AdminEmail       string
+	AdminPass        string
 }
 
 func LoadConfig() (*Config, error) {
@@ -46,6 +48,9 @@ func LoadConfig() (*Config, error) {
 	if redisURL == "" {
 		return nil, errors.New("REDIS_URL is required")
 	}
+
+	adminEmail := utils.GetEnvDefault("ADMIN_EMAIL", "admin@email.com")
+	adminPass := utils.GetEnvDefault("ADMIN_PASS", "pb_admin")
 
 	dbConn := os.Getenv("GOOSE_DBSTRING")
 	if dbConn == "" {
@@ -84,6 +89,8 @@ func LoadConfig() (*Config, error) {
 		EmailSenderPass:  emailSenderPass,
 		EmailSMTP:        emailSMTP,
 		SMTPAddress:      smtpAddress,
+		AdminEmail:       adminEmail,
+		AdminPass:        adminPass,
 	}, nil
 }
 

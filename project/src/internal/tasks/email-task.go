@@ -24,7 +24,7 @@ func NewEmailTask(pl *utils.EmailPayload) (*asynq.Task, error) {
 
 func GetEmailTemplate(templateName string) (*template.Template, error) {
 	htmlTemplateFile, err := utils.GetFilePath(
-		[]string{"src", "services", "notifications", "internal", "templates", templateName},
+		[]string{"src", "services", "worker", "internal", "templates", templateName},
 	)
 	if err != nil {
 		return nil, err

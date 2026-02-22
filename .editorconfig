@@ -13,7 +13,7 @@ insert_final_newline = true
 single_quote=false
 
 
-[*.{yaml, yml, ts, js, txs, jsx, json}]
+[*.{yaml, yml, ts, js, txs, jsx, json, html}]
 indent_style = space
 indent_size = 2
 end_of_line = lf

@@ -39,9 +39,15 @@ SELECT up.id,
 FROM users_page up
    CROSS JOIN total t;
 -- name: CreateUser :one
-INSERT INTO users (uuid, name, email, password, role_id, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id;
+INSERT INTO users (
+      name,
+      uuid,
+      email,
+      password,
+      role_id
+   )
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
 -- name: GetUsersWithTotal :many
 WITH users_page AS (
    SELECT u.id,

@@ -1,0 +1,1386 @@
+{{ define "content" }}
+<div x-data="usersPage()" x-init="init()" class="max-w-8xl mx-auto space-y-6">
+  <div
+    x-show="toast.show"
+    x-cloak
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 translate-y-2"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 translate-y-2"
+    class="fixed right-6 top-6 z-50 w-full max-w-sm overflow-hidden rounded-lg border shadow-lg"
+    :class="{
+        'bg-background border-border': true
+    }"
+  >
+    <div class="p-4">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <svg
+            x-show="toast.type === 'success'"
+            class="h-5 w-5 text-emerald-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <svg
+            x-show="toast.type === 'error'"
+            class="h-5 w-5 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+        <div class="ml-3 w-0 flex-1 pt-0.5">
+          <p
+            class="text-sm font-medium text-foreground"
+            x-text="toast.type === 'success' ? 'Sucesso' : 'Erro'"
+          ></p>
+          <p
+            class="mt-1 text-sm text-muted-foreground"
+            x-text="toast.message"
+          ></p>
+        </div>
+        <div class="ml-4 flex flex-shrink-0">
+          <button
+            @click="toast.show = false"
+            class="inline-flex rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <span class="sr-only">Fechar</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+  >
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight text-foreground">
+        Configurações
+      </h1>
+      <p class="text-muted-foreground mt-1 text-sm">
+        Gerencie usuários, permissões e acessos ao sistema.
+      </p>
+    </div>
+    {{ if or .Can.Admin .Can.Dev }}
+    <div
+      x-data="{ showTooltip: false }"
+      @mouseenter="showTooltip = true"
+      @mouseleave="showTooltip = false"
+      class="relative"
+    >
+      <button
+        type="button"
+        aria-label="Adicionar novo usuário"
+        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow transition-all hover:bg-primary/90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        @click="openCreateModal()"
+      >
+        <svg
+          class="mr-2 h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Novo Usuário
+      </button>
+      <div
+        x-show="showTooltip"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-1"
+        class="absolute right-0 top-full mt-2 z-10 w-max max-w-[200px] rounded-md bg-black border border-border px-3 py-1.5 text-xs font-medium text-white shadow-md"
+      >
+        Adicionar um novo usuário ao sistema
+      </div>
+    </div>
+    {{ end }}
+  </div>
+
+  <div
+    class="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
+  >
+    <div
+      x-show="loading"
+      class="flex flex-col items-center justify-center py-16 space-y-4"
+    >
+      <div
+        class="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+      ></div>
+      <p class="text-sm text-muted-foreground animate-pulse">
+        Carregando usuários...
+      </p>
+    </div>
+
+    <div x-show="!loading">
+      <div
+        x-show="error"
+        class="m-6 rounded-lg bg-destructive/10 p-4 text-sm text-destructive flex items-center gap-2"
+      >
+        <svg
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span x-text="error"></span>
+      </div>
+
+      <div class="px-6 py-5 border-b border-border/40 bg-muted/5">
+        <form
+          class="flex flex-col gap-3 sm:flex-row sm:items-center"
+          @submit.prevent="submitSearch()"
+        >
+          <div class="relative flex-1 group">
+            <svg
+              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors duration-200"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 110-15 7.5 7.5 0 010 15z"
+              />
+            </svg>
+            <input
+              type="text"
+              x-model="searchTerm"
+              @input="searchError = ''"
+              class="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-4 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-sm"
+              placeholder="Buscar usuários por nome ou email..."
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="submit"
+              class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-all hover:bg-primary/90 hover:shadow-md disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]"
+              :disabled="loading"
+            >
+              Buscar
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-11 items-center justify-center rounded-lg border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]"
+              @click="clearSearch()"
+              :disabled="loading || (!searchTerm && !searchActive)"
+            >
+              Limpar
+            </button>
+          </div>
+        </form>
+        <p
+          x-show="searchError"
+          x-cloak
+          x-transition
+          class="mt-2 text-xs font-medium text-red-500 ml-1"
+          x-text="searchError"
+        ></p>
+      </div>
+
+      <div class="overflow-x-auto" x-show="items.length > 0">
+        <table class="w-full text-sm text-left">
+          <thead
+            class="bg-muted/50 text-muted-foreground border-b border-border"
+          >
+            <tr>
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs w-[80px]"
+              >
+                ID
+              </th>
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs"
+              >
+                Nome
+              </th>
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs"
+              >
+                Email
+              </th>
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs"
+              >
+                Cargo
+              </th>
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs"
+              >
+                Status
+              </th>
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs"
+              >
+                Criado em
+              </th>
+              {{ if or .Can.Admin .Can.Dev }}
+              <th
+                class="py-3 px-4 font-medium uppercase tracking-wider text-xs text-right"
+              >
+                Ações
+              </th>
+              {{ end }}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <template x-for="user in items" :key="user.id">
+              <tr
+                class="group hover:bg-muted/30 transition-colors duration-150"
+              >
+                <td
+                  class="py-3 px-4 font-mono text-xs text-muted-foreground"
+                  x-text="'#' + user.id"
+                ></td>
+                <td class="py-3 px-4 font-medium text-foreground">
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase"
+                      x-text="user.name ? user.name.substring(0,2) : ''"
+                    ></div>
+                    <span x-text="user.name"></span>
+                  </div>
+                </td>
+                <td
+                  class="py-3 px-4 text-muted-foreground"
+                  x-text="user.email"
+                ></td>
+                <td class="py-3 px-4">
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border"
+                    :class="{
+                            'bg-blue-50 text-blue-700 border-blue-200': roleToId(user.role) === 1,
+                            'bg-purple-50 text-purple-700 border-purple-200': roleToId(user.role) === 2,
+                            'bg-amber-50 text-amber-700 border-amber-200': roleToId(user.role) === 3,
+                            'bg-rose-50 text-rose-700 border-rose-200': roleToId(user.role) === 4
+                        }"
+                    x-text="user.role || '-'"
+                  ></span>
+                </td>
+                <td class="py-3 px-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
+                    :class="user.enabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200'"
+                  >
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                      :class="user.enabled ? 'bg-emerald-500' : 'bg-gray-400'"
+                    ></span>
+                    <span x-text="user.enabled ? 'Ativo' : 'Inativo'"></span>
+                  </span>
+                </td>
+                <td
+                  class="py-3 px-4 text-muted-foreground text-xs"
+                  x-text="formatDate(user.created_at)"
+                ></td>
+                {{ if or .Can.Admin .Can.Dev }}
+                <td class="py-3 px-4 text-right">
+                  <div
+                    x-data="{ showTooltip: false }"
+                    @mouseenter="showTooltip = true"
+                    @mouseleave="showTooltip = false"
+                    class="relative inline-block"
+                  >
+                    <button
+                      type="button"
+                      aria-label="Editar usuário"
+                      class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-background hover:text-foreground hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border border-transparent hover:border-border"
+                      @click="openEditModal(user)"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          d="M16.862 4.487a2.1 2.1 0 013.002 2.94L9.55 18.11l-4.57 1.01 1.02-4.54 10.862-10.093z"
+                        />
+                        <path d="M19.5 7.5L16.5 4.5" />
+                      </svg>
+                    </button>
+                    <div
+                      x-show="showTooltip"
+                      x-cloak
+                      x-transition:enter="transition ease-out duration-200"
+                      x-transition:enter-start="opacity-0 translate-y-1"
+                      x-transition:enter-end="opacity-100 translate-y-0"
+                      x-transition:leave="transition ease-in duration-150"
+                      x-transition:leave-start="opacity-100 translate-y-0"
+                      x-transition:leave-end="opacity-0 translate-y-1"
+                      class="absolute right-0 bottom-full mb-2 z-10 w-max rounded-md bg-black border border-border px-2.5 py-1 text-xs font-medium text-white shadow-md"
+                    >
+                      Editar usuário
+                    </div>
+                  </div>
+                </td>
+                {{ end }}
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        x-show="items.length === 0 && !error"
+        class="flex flex-col items-center justify-center py-16 text-center"
+      >
+        <div class="rounded-full bg-muted p-4 mb-4">
+          <svg
+            class="h-8 w-8 text-muted-foreground"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+            />
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-foreground">
+          Nenhum usuário encontrado
+        </h3>
+        <p class="text-sm text-muted-foreground mt-1">
+          Tente ajustar os filtros ou crie um novo usuário.
+        </p>
+      </div>
+    </div>
+
+    <div
+      class="flex items-center justify-between border-t border-border bg-muted/20 px-6 py-4"
+    >
+      <div
+        class="text-xs text-muted-foreground font-medium"
+        x-text="`Página ${currentPage} de ${totalPages || 1} - Total: ${totalItems}`"
+      ></div>
+      <div class="flex items-center gap-1.5">
+        <button
+          @click="prevPage"
+          :disabled="currentPage === 1 || loading"
+          class="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          <svg
+            class="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Anterior
+        </button>
+        <button
+          @click="goToPage(1)"
+          :disabled="loading"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-xs font-medium shadow-sm transition-colors disabled:pointer-events-none disabled:opacity-50"
+          :class="currentPage === 1 ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-accent hover:text-accent-foreground'"
+        >
+          1
+        </button>
+        <span
+          x-show="visiblePages()[0] > 2"
+          class="flex h-8 w-8 items-center justify-center text-xs text-muted-foreground"
+          >…</span
+        >
+        <template x-for="page in visiblePages()" :key="page">
+          <button
+            x-show="page !== 1 && page !== totalPages"
+            @click="goToPage(page)"
+            :disabled="loading"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-xs font-medium shadow-sm transition-colors disabled:pointer-events-none disabled:opacity-50"
+            :class="page === currentPage ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-accent hover:text-accent-foreground'"
+            x-text="page"
+          ></button>
+        </template>
+        <span
+          x-show="visiblePages()[visiblePages().length - 1] < totalPages - 1"
+          class="flex h-8 w-8 items-center justify-center text-xs text-muted-foreground"
+          >…</span
+        >
+        <button
+          x-show="totalPages > 1"
+          @click="goToPage(totalPages)"
+          :disabled="loading"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-xs font-medium shadow-sm transition-colors disabled:pointer-events-none disabled:opacity-50"
+          :class="currentPage === totalPages ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-accent hover:text-accent-foreground'"
+          x-text="totalPages"
+        ></button>
+        <button
+          @click="nextPage"
+          :disabled="currentPage === totalPages || loading"
+          class="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          Próxima
+          <svg
+            class="ml-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {{ if or .Can.Admin .Can.Dev }}
+  <div
+    x-show="createModalOpen"
+    x-cloak
+    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-6"
+    @keydown.escape.window="closeCreateModal()"
+    @click.self="closeCreateModal()"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      class="w-full max-w-lg rounded-xl bg-card shadow-lg border border-border sm:max-w-xl"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+      x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+      x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+    >
+      <div class="flex items-center justify-between p-6 border-b border-border">
+        <div>
+          <h3 class="text-lg font-semibold leading-none tracking-tight">
+            Novo usuário
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1.5">
+            Preencha os dados para adicionar um novo membro.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          @click="closeCreateModal()"
+          aria-label="Fechar modal"
+        >
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form class="p-6 space-y-4" @submit.prevent="submitCreateUser()">
+        <div
+          x-show="createErrorMessage"
+          x-cloak
+          class="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          <svg
+            class="h-5 w-5 flex-shrink-0 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span x-text="createErrorMessage"></span>
+        </div>
+        <div class="space-y-2">
+          <label
+            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >Nome</label
+          >
+          <input
+            type="text"
+            required
+            x-model="createForm.name"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+            placeholder="Ex: João da Silva"
+          />
+        </div>
+        <div class="space-y-2">
+          <label
+            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >Email</label
+          >
+          <input
+            type="email"
+            required
+            x-model="createForm.email"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+            placeholder="Ex: joao@empresa.com"
+          />
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="space-y-2">
+            <label
+              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >Cargo</label
+            >
+            <div class="relative">
+              <select
+                required
+                x-model.number="createForm.roleId"
+                class="flex h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+              >
+                <option value="1">Customer</option>
+                <option value="2">Manager</option>
+                {{ if .Can.Dev }}
+                <option value="3">Admin</option>
+                {{ end }}
+              </select>
+              <div
+                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label
+              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >Senha automática</label
+            >
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                x-model="createForm.password"
+                readonly
+                class="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background font-mono text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                @click="copyPassword()"
+                aria-label="Copiar senha"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M9 12h9m-9 4h9M7 8h11a2 2 0 012 2v8a2 2 0 01-2 2H7a2 2 0 01-2-2V10a2 2 0 012-2z"
+                  />
+                  <path
+                    d="M5 16H4a2 2 0 01-2-2V6a2 2 0 012-2h9a2 2 0 012 2v1"
+                  />
+                </svg>
+              </button>
+            </div>
+            <span
+              x-show="passwordCopied"
+              x-cloak
+              x-transition
+              class="text-xs text-emerald-600 font-medium flex items-center gap-1"
+            >
+              <svg
+                class="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Senha copiada!
+            </span>
+          </div>
+        </div>
+
+        <div
+          class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3"
+        >
+          <div>
+            <p class="text-sm font-medium">Usuário ativo</p>
+            <p class="text-xs text-muted-foreground">
+              Novos usuários são criados como ativos.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked
+            disabled
+            class="h-4 w-4 rounded border-input text-primary focus:ring-ring disabled:opacity-60"
+          />
+        </div>
+
+        <div
+          class="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6"
+        >
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+            @click="closeCreateModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 shadow-sm"
+            :disabled="createSubmitting"
+          >
+            <svg
+              x-show="createSubmitting"
+              class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Criar usuário
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {{ end }} {{ if or .Can.Admin .Can.Dev }}
+  <div
+    x-show="editModalOpen"
+    x-cloak
+    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-6"
+    @keydown.escape.window="closeEditModal()"
+    @click.self="closeEditModal()"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      class="w-full max-w-lg rounded-xl bg-card shadow-lg border border-border sm:max-w-xl"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+      x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+      x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+    >
+      <div class="flex items-center justify-between p-6 border-b border-border">
+        <div>
+          <h3 class="text-lg font-semibold leading-none tracking-tight">
+            Editar usuário
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1.5">
+            Atualize os dados do usuário.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          @click="closeEditModal()"
+          aria-label="Fechar modal"
+        >
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form class="p-6 space-y-4" @submit.prevent="submitEditUser()">
+        <div
+          x-show="editErrorMessage"
+          x-cloak
+          class="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          <svg
+            class="h-5 w-5 flex-shrink-0 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span x-text="editErrorMessage"></span>
+        </div>
+        <div class="space-y-2">
+          <label
+            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >Nome</label
+          >
+          <input
+            type="text"
+            required
+            x-model="editForm.name"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+            placeholder="Ex: João da Silva"
+          />
+        </div>
+        <div class="space-y-2">
+          <label
+            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >Email</label
+          >
+          <input
+            type="email"
+            required
+            x-model="editForm.email"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+            placeholder="Ex: joao@empresa.com"
+          />
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="space-y-2">
+            <label
+              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >Cargo</label
+            >
+            <div class="relative">
+              <select
+                required
+                x-model.number="editForm.roleId"
+                class="flex h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+              >
+                <option value="1">Customer</option>
+                <option value="2">Manager</option>
+                {{ if .Can.Dev }}
+                <option value="3">Admin</option>
+                {{ end }}
+              </select>
+              <div
+                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label
+              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >Nova Senha (opcional)</label
+            >
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                x-model="editForm.password"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                placeholder="Deixe em branco para manter"
+              />
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                @click="editForm.password = generatePassword()"
+                aria-label="Gerar senha"
+                title="Gerar senha aleatória"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex items-center justify-between rounded-lg border border-border px-4 py-3"
+        >
+          <div>
+            <p class="text-sm font-medium">Usuário ativo</p>
+            <p class="text-xs text-muted-foreground">
+              Desabilitar remove o acesso e força novo login.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            x-model="editForm.enabled"
+            class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+          />
+        </div>
+
+        <div
+          class="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6"
+        >
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+            @click="closeEditModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 shadow-sm"
+            :disabled="editSubmitting"
+          >
+            <svg
+              x-show="editSubmitting"
+              class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Salvar alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {{ end }}
+</div>
+
+<script>
+  function usersPage() {
+    return {
+      currentPage: 1,
+      limit: 10,
+      totalPages: 1,
+      totalItems: 0,
+      items: [],
+      loading: false,
+      error: "",
+      searchTerm: "",
+      searchError: "",
+      searchActive: false,
+      createModalOpen: false,
+      createSubmitting: false,
+      createErrorMessage: "",
+      passwordCopied: false,
+      createForm: {
+        name: "",
+        email: "",
+        roleId: 1,
+        password: "",
+        enabled: true,
+      },
+      editModalOpen: false,
+      editSubmitting: false,
+      editErrorMessage: "",
+      editForm: {
+        id: null,
+        name: "",
+        email: "",
+        roleId: 1,
+        password: "",
+        enabled: true,
+      },
+      initialized: false,
+      toast: {
+        show: false,
+        message: "",
+        type: "success",
+      },
+      init() {
+        if (this.initialized) {
+          return;
+        }
+        this.initialized = true;
+        this.restoreToast();
+        this.fetchUsers();
+      },
+      restoreToast() {
+        const stored = sessionStorage.getItem("usersToast");
+        if (!stored) {
+          return;
+        }
+        try {
+          const data = JSON.parse(stored);
+          if (data && data.message) {
+            this.showToast(data.message, data.type || "success");
+          }
+        } finally {
+          sessionStorage.removeItem("usersToast");
+        }
+      },
+      showToast(message, type) {
+        this.toast = {
+          show: true,
+          message,
+          type,
+        };
+        setTimeout(() => {
+          this.toast.show = false;
+        }, 3500);
+      },
+      openCreateModal() {
+        this.createModalOpen = true;
+        this.createErrorMessage = "";
+        this.createForm = {
+          name: "",
+          email: "",
+          roleId: 1,
+          password: this.generatePassword(),
+          enabled: true,
+        };
+      },
+      closeCreateModal() {
+        this.createModalOpen = false;
+        this.createErrorMessage = "";
+      },
+      openEditModal(user) {
+        this.editModalOpen = true;
+        this.editErrorMessage = "";
+        this.editForm = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          roleId: this.roleToId(user.role),
+          password: "",
+          enabled: user.enabled,
+        };
+      },
+      closeEditModal() {
+        this.editModalOpen = false;
+        this.editErrorMessage = "";
+        this.editForm = {
+          id: null,
+          name: "",
+          email: "",
+          roleId: 1,
+          password: "",
+          enabled: true,
+        };
+      },
+      generatePassword() {
+        const chars =
+          "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%";
+        let value = "";
+        for (let i = 0; i < 12; i += 1) {
+          value += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return value;
+      },
+      async copyPassword() {
+        try {
+          await navigator.clipboard.writeText(this.createForm.password);
+        } catch (e) {
+          const input = document.createElement("textarea");
+          input.value = this.createForm.password;
+          document.body.appendChild(input);
+          input.select();
+          document.execCommand("copy");
+          document.body.removeChild(input);
+        }
+        this.passwordCopied = true;
+        setTimeout(() => {
+          this.passwordCopied = false;
+        }, 2000);
+      },
+      async submitCreateUser() {
+        if (this.createSubmitting) return;
+        this.createSubmitting = true;
+        this.createErrorMessage = "";
+        try {
+          const res = await fetch("/api/users/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "X-CSRF-Token": "{{ .csrf }}",
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              name: this.createForm.name,
+              email: this.createForm.email,
+              role_id: this.createForm.roleId,
+              password: this.createForm.password,
+            }),
+          });
+          if (!res.ok) {
+            const message = await this.extractErrorMessage(
+              res,
+              "Erro ao criar usuário. Tente novamente.",
+            );
+            if (res.status === 400) {
+              this.createErrorMessage = message;
+              return;
+            }
+            this.closeCreateModal();
+            sessionStorage.setItem(
+              "usersToast",
+              JSON.stringify({
+                type: "error",
+                message,
+              }),
+            );
+            this.showToast(message, "error");
+            return;
+          }
+          sessionStorage.setItem(
+            "usersToast",
+            JSON.stringify({
+              type: "success",
+              message: "Usuário criado com sucesso.",
+            }),
+          );
+          this.showToast("Usuário criado com sucesso.", "success");
+          this.closeCreateModal();
+          this.fetchUsers();
+        } catch (e) {
+          const message = "Erro ao criar usuário. Tente novamente.";
+          this.closeCreateModal();
+          sessionStorage.setItem(
+            "usersToast",
+            JSON.stringify({
+              type: "error",
+              message,
+            }),
+          );
+          this.showToast(message, "error");
+        } finally {
+          this.createSubmitting = false;
+        }
+      },
+      async submitEditUser() {
+        if (this.editSubmitting) return;
+        this.editSubmitting = true;
+        this.editErrorMessage = "";
+        try {
+          const payload = {
+            name: this.editForm.name,
+            email: this.editForm.email,
+            role_id: this.editForm.roleId,
+            enable: this.editForm.enabled,
+          };
+          if (this.editForm.password) {
+            payload.password = this.editForm.password;
+          }
+
+          const res = await fetch(`/api/users/admin/${this.editForm.id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "X-CSRF-Token": "{{ .csrf }}",
+            },
+            credentials: "same-origin",
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const message = await this.extractErrorMessage(
+              res,
+              "Erro ao atualizar usuário. Tente novamente.",
+            );
+            if (res.status === 400) {
+              this.editErrorMessage = message;
+              return;
+            }
+            this.closeEditModal();
+            sessionStorage.setItem(
+              "usersToast",
+              JSON.stringify({
+                type: "error",
+                message,
+              }),
+            );
+            this.showToast(message, "error");
+            return;
+          }
+          sessionStorage.setItem(
+            "usersToast",
+            JSON.stringify({
+              type: "success",
+              message: "Usuário atualizado com sucesso.",
+            }),
+          );
+          this.showToast("Usuário atualizado com sucesso.", "success");
+          this.closeEditModal();
+          this.fetchUsers();
+        } catch (e) {
+          const message = "Erro ao atualizar usuário. Tente novamente.";
+          this.closeEditModal();
+          sessionStorage.setItem(
+            "usersToast",
+            JSON.stringify({
+              type: "error",
+              message,
+            }),
+          );
+          this.showToast(message, "error");
+        } finally {
+          this.editSubmitting = false;
+        }
+      },
+      async extractErrorMessage(response, fallback) {
+        try {
+          const data = await response.json();
+          if (data && typeof data.error === "string" && data.error) {
+            return data.error;
+          }
+          if (data && data.errors && typeof data.errors === "object") {
+            const values = Object.values(data.errors);
+            if (values.length > 0) {
+              const first = values[0];
+              if (typeof first === "string") {
+                return first;
+              }
+            }
+          }
+          if (data && typeof data.message === "string" && data.message) {
+            return data.message;
+          }
+        } catch (e) {
+          return fallback;
+        }
+        return fallback;
+      },
+      async fetchUsers() {
+        this.loading = true;
+        this.error = "";
+        this.searchError = "";
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const term = this.searchTerm.trim();
+          const useSearch = this.searchActive && term.length >= 3;
+          const url = useSearch
+            ? `/api/users/search?page=${this.currentPage}&limit=${this.limit}&term=${encodeURIComponent(term)}`
+            : `/api/users?page=${this.currentPage}&limit=${this.limit}`;
+          const res = await fetch(url, {
+            headers: {
+              Accept: "application/json",
+            },
+          });
+          if (!res.ok) {
+            this.error = "Erro ao carregar usuários.";
+            this.items = [];
+            return;
+          }
+          const data = await res.json();
+          this.currentPage = data.page || this.currentPage;
+          this.limit = data.items_per_page || this.limit;
+          this.totalItems = data.total_items || 0;
+          this.totalPages = data.total_pages || 1;
+          this.items = data.items || [];
+        } catch (e) {
+          this.error = "Erro ao carregar usuários.";
+          this.items = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+      nextPage() {
+        if (this.currentPage < this.totalPages) {
+          this.currentPage += 1;
+          this.fetchUsers();
+        }
+      },
+      prevPage() {
+        if (this.currentPage > 1) {
+          this.currentPage -= 1;
+          this.fetchUsers();
+        }
+      },
+      goToPage(target) {
+        if (
+          target === this.currentPage ||
+          target < 1 ||
+          target > this.totalPages
+        ) {
+          return;
+        }
+        this.currentPage = target;
+        this.fetchUsers();
+      },
+      submitSearch() {
+        const term = this.searchTerm.trim();
+        this.searchError = "";
+        if (!term) {
+          if (this.searchActive) {
+            this.searchActive = false;
+            this.currentPage = 1;
+            this.fetchUsers();
+          }
+          return;
+        }
+        if (term.length < 3) {
+          this.searchError = "Digite ao menos 3 caracteres para buscar.";
+          return;
+        }
+        this.searchActive = true;
+        this.currentPage = 1;
+        this.fetchUsers();
+      },
+      clearSearch() {
+        this.searchTerm = "";
+        this.searchError = "";
+        if (this.searchActive) {
+          this.searchActive = false;
+          this.currentPage = 1;
+          this.fetchUsers();
+        }
+      },
+      visiblePages() {
+        if (this.totalPages <= 1) {
+          return [1];
+        }
+        if (this.totalPages <= 7) {
+          return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+        }
+        const start = Math.max(2, this.currentPage - 1);
+        const end = Math.min(this.totalPages - 1, this.currentPage + 1);
+        const pages = [];
+        for (let i = start; i <= end; i += 1) {
+          pages.push(i);
+        }
+        return pages;
+      },
+      formatDate(value) {
+        if (!value) {
+          return "-";
+        }
+        if (value.Time) {
+          return new Date(value.Time).toLocaleDateString("pt-BR");
+        }
+        return new Date(value).toLocaleDateString("pt-BR");
+      },
+      roleToId(role) {
+        switch ((role || "").toUpperCase()) {
+          case "CUSTOMER":
+            return 1;
+          case "MANAGER":
+            return 2;
+          case "ADMIN":
+            return 3;
+          case "DEV":
+            return 4;
+          default:
+            return 1;
+        }
+      },
+    };
+  }
+</script>
+{{ end }}

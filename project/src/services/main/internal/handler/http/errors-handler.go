@@ -28,6 +28,9 @@ func MapAuthErrorToHTTP(err error, t *utils.Translator) (int, HTTPError) {
 	case errors.Is(err, auth.ErrInvalidCredentials):
 		msg = t.T("errors.user.invalid_credentials", nil)
 		return http.StatusUnauthorized, HTTPError{Message: msg, Field: "password"}
+	case errors.Is(err, auth.ErrUserDisabled):
+		msg = t.T("errors.user.disabled", nil)
+		return http.StatusForbidden, HTTPError{Message: msg, Field: "email"}
 	case errors.Is(err, users.ErrUserNotFound):
 		msg = t.T("errors.user.not_found", nil)
 		return http.StatusNotFound, HTTPError{Message: msg, Field: "email"}
@@ -48,7 +51,7 @@ func MapUserErrorToHTTP(err error, t *utils.Translator) (int, HTTPError) {
 	case errors.Is(err, users.ErrUserNotFound):
 		msg = t.T("errors.user.not_found", nil)
 		return http.StatusNotFound, HTTPError{Message: msg, Field: "email"}
-	case errors.Is(err, users.ErrEmailAlreadyExists):
+	case errors.Is(err, users.ErrUserEmailAlreadyExists):
 		msg = t.T("errors.user.email_already_exists", nil)
 		return http.StatusConflict, HTTPError{Message: msg, Field: "email"}
 	case errors.Is(err, utils.ErrInternal):

@@ -1,17 +1,19 @@
 version: "3"
 
-dotenv:
-  - .env
+dotenv: ['.env', '.env.test']
 
 #===================##===================##===================##===================##===================##===================##===================##===================#
 #====== ENV ======##====== ENV ======##====== ENV ======##====== ENV ======##====== ENV ======##====== ENV ======##====== ENV ======##====== ENV ======#
 #===================##===================##===================##===================##===================##===================##===================##===================#
 
 vars:
+  ENV_DEV: .env
+  ENV_TEST: .env.test
   BIN_MAIN: _main
   BIN_NOTIF: _notifications
   DONE_MESSAGE: "Finished Operation"
   BIN_MAIN_PKG_CONFIGS: _main_configs
+  BIN_MAIN_PKG_E2E: _main_e2e
 
 tasks:
   default:
@@ -55,8 +57,8 @@ tasks:
         GOOS=darwin CGO_ENABLED=1 GOARCH=arm64 \
         go build -o ./project/out/{{.BIN_MAIN}} project/src/services/main/cmd/*.go
 
-  build-notifications:
-    desc: Build notifications project executable
+  build-worker:
+    desc: Build worker project executable
     cmds:
       - |
         GOOS=darwin CGO_ENABLED=1 GOARCH=arm64 \
@@ -75,27 +77,34 @@ tasks:
       - build:css
       - build-main
     cmds:
-      - env $(cat .env) ./project/out/{{.BIN_MAIN}}
+      - env $(cat {{.ENV_DEV}}) ./project/out/{{.BIN_MAIN}}
 
-  run-notifications:
-    desc: Run notifications executable
+  run-worker:
+    desc: Run worker executable
     deps:
-      - build-notifications
+      - build-worker
     cmds:
-      - env $(cat .env) ./project/out/{{.BIN_NOTIF}}
+      - env $(cat {{.ENV_DEV}}) ./project/out/{{.BIN_NOTIF}}
 
 
-  test-main-config:
-    desc: Build and run main config tests package
+  test-config:
+    desc: Build and run config tests package
     cmds:
-      - go test ./project/src/services/main/configs -c -o project/out/{{.BIN_MAIN_PKG_CONFIGS}}
-      - ./project/out/{{.BIN_MAIN_PKG_CONFIGS}} -test.v -test.bench=.
+      - go test ./project/src/internal/configs -c -o project/out/{{.BIN_MAIN_PKG_CONFIGS}}
+      - env $(cat {{.ENV_TEST}}) ./project/out/{{.BIN_MAIN_PKG_CONFIGS}} -test.v -test.bench=.
+
+  test-main-e2e:
+    desc: Build and run main e2e tests package
+    cmds:
+      - go test ./project/src/services/main/internal/tests/e2e -c -o project/out/{{.BIN_MAIN_PKG_E2E}}
+      - env $(cat {{.ENV_TEST}}) ./project/out/{{.BIN_MAIN_PKG_E2E}} -test.v -test.bench=.
 
   test:
     desc: Run all packages tests
     deps:
       - clean
-      - test-main-config
+      - test-config
+      - test-main-e2e
 
   sqlc:
     desc: Generate SQLC code

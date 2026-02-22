@@ -13,32 +13,47 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (uuid, name, email, password, role_id, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id
+INSERT INTO users (
+      name,
+      uuid,
+      email,
+      password,
+      role_id
+   )
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, uuid, name, email, password, role_id, enabled, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
-	Uuid      uuid.UUID
-	Name      string
-	Email     string
-	Password  string
-	RoleID    int32
-	UpdatedAt pgtype.Timestamp
+	Name     string
+	Uuid     uuid.UUID
+	Email    string
+	Password string
+	RoleID   int32
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int32, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.Uuid,
 		arg.Name,
+		arg.Uuid,
 		arg.Email,
 		arg.Password,
 		arg.RoleID,
-		arg.UpdatedAt,
 	)
-	var id int32
-	err := row.Scan(&id)
-	return id, err
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Name,
+		&i.Email,
+		&i.Password,
+		&i.RoleID,
+		&i.Enabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const findRoleByID = `-- name: FindRoleByID :one

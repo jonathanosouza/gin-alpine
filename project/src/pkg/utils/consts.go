@@ -46,7 +46,7 @@ const (
 	JobStarted                     = "JOB_STARTED"
 	JobFinished                    = "JobFinished"
 	TaskSendEmail                  = "TASK_SENDING_EMAIL"
-	LinkResetPasswordExpiration    = 3 * time.Hour
+	LinkResetPasswordExpiration    = 20 * time.Minute
 	LongCachePastData              = 720 * time.Hour
 	ShortCacheActualData           = 24 * time.Hour
 	CronEveryMinute                = "* * * * *"

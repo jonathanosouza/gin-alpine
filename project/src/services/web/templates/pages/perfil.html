@@ -1,0 +1,498 @@
+{{ define "content" }}
+<div
+  x-data="profilePage()"
+  x-init="init()"
+  class="container max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8"
+>
+  <!-- Toast Notification -->
+  <div
+    x-show="toast.show"
+    x-cloak
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+    x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+    class="fixed top-4 right-4 z-50 flex w-full max-w-md items-center gap-x-4 rounded-xl border bg-background p-4 shadow-lg sm:top-6 sm:right-6"
+    :class="toast.type === 'success' ? 'border-emerald-500/20 shadow-emerald-500/10' : 'border-red-500/20 shadow-red-500/10'"
+  >
+    <div
+      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+      :class="toast.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'"
+    >
+      <svg
+        x-show="toast.type === 'success'"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M5 13l4 4L19 7"
+        />
+      </svg>
+      <svg
+        x-show="toast.type === 'error'"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+    </div>
+    <div class="flex-1">
+      <h4
+        class="text-sm font-semibold"
+        :class="toast.type === 'success' ? 'text-emerald-900' : 'text-red-900'"
+        x-text="toast.type === 'success' ? 'Sucesso' : 'Erro'"
+      ></h4>
+      <p class="text-sm text-muted-foreground" x-text="toast.message"></p>
+    </div>
+    <button
+      @click="toast.show = false"
+      class="text-muted-foreground hover:text-foreground"
+    >
+      <span class="sr-only">Fechar</span>
+      <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          clip-rule="evenodd"
+        />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Header Section -->
+  <div class="mb-8 space-y-2">
+    <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+      Configurações de Perfil
+    </h1>
+    <p class="text-lg text-muted-foreground">
+      Gerencie suas informações pessoais e detalhes da conta.
+    </p>
+  </div>
+
+  <div class="grid gap-8 lg:grid-cols-3">
+    <!-- Sidebar / User Avatar Card -->
+    <div class="lg:col-span-1 space-y-6">
+      <div
+        class="rounded-xl bg-card text-card-foreground shadow-lg overflow-hidden"
+      >
+        <div class="h-32 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+        <div class="px-6 pb-8 relative">
+          <div
+            class="absolute -top-42 left-1/2 -translate-x-1/2 h-32 w-32 rounded-full border-4 border-background bg-muted flex items-center justify-center text-4xl font-bold text-muted-foreground overflow-hidden shadow-md"
+          >
+            <span x-text="getInitials(form.name)"></span>
+          </div>
+          <div class="mt-32 space-y-2 text-center">
+            <h3
+              class="text-2xl font-bold leading-none tracking-tight"
+              x-text="form.name"
+            ></h3>
+            <p
+              class="text-sm text-muted-foreground break-all"
+              x-text="form.email"
+            ></p>
+          </div>
+          <div class="mt-6 flex flex-wrap justify-center gap-2">
+            <span
+              class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors"
+              :class="{
+                      'bg-blue-50 text-blue-700 border-blue-200': roleToId(profile.role) === 1,
+                      'bg-purple-50 text-purple-700 border-purple-200': roleToId(profile.role) === 2,
+                      'bg-amber-50 text-amber-700 border-amber-200': roleToId(profile.role) === 3,
+                      'bg-rose-50 text-rose-700 border-rose-200': roleToId(profile.role) === 4
+                  }"
+              x-text="profile.role || '-'"
+            ></span>
+            <span
+              class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent"
+              :class="profile.enabled ? 'bg-emerald-500/15 text-emerald-700' : 'bg-red-500/15 text-red-700'"
+              x-text="profile.enabled ? 'Ativo' : 'Inativo'"
+            ></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Form Area -->
+    <div class="lg:col-span-2">
+      <div class="rounded-xl bg-card text-card-foreground shadow-lg">
+        <div class="p-6 pt-8">
+          <div class="mb-6">
+            <h3 class="text-lg font-medium leading-6 text-foreground">
+              Informações Pessoais
+            </h3>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Atualize seus dados de identificação e acesso.
+            </p>
+          </div>
+
+          <form @submit.prevent="updateProfile" class="space-y-6">
+            <div class="grid gap-6 sm:grid-cols-2">
+              <!-- Name -->
+              <div class="space-y-2 sm:col-span-2">
+                <label
+                  for="name"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >Nome Completo</label
+                >
+                <div class="relative">
+                  <input
+                    id="name"
+                    type="text"
+                    x-model="form.name"
+                    class="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow"
+                    placeholder="Seu nome completo"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div class="space-y-2 sm:col-span-2">
+                <label
+                  for="email"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >Email</label
+                >
+                <div class="relative">
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                  >
+                    <svg
+                      class="h-4 w-4 text-muted-foreground"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect width="20" height="16" x="2" y="4" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                  </div>
+                  <input
+                    id="email"
+                    type="email"
+                    x-model="form.email"
+                    class="flex h-11 w-full rounded-lg border border-input bg-background pl-10 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow"
+                    placeholder="seu@email.com"
+                    required
+                    :class="{'border-red-500 focus-visible:ring-red-500': errors.email}"
+                  />
+                </div>
+                <p
+                  x-show="errors.email"
+                  x-text="errors.email"
+                  class="text-sm font-medium text-red-500 mt-1 animate-in slide-in-from-top-1 fade-in duration-200"
+                ></p>
+              </div>
+
+              <!-- Password -->
+              <div class="space-y-2 sm:col-span-2">
+                <label
+                  for="password"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >Nova Senha</label
+                >
+                <div class="relative">
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                  >
+                    <svg
+                      class="h-4 w-4 text-muted-foreground"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <input
+                    id="password"
+                    type="password"
+                    x-model="form.password"
+                    placeholder="Deixe em branco para manter a atual"
+                    class="flex h-11 w-full rounded-lg border border-input bg-background pl-10 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow"
+                    :class="{'border-red-500 focus-visible:ring-red-500': errors.password}"
+                  />
+                </div>
+                <p
+                  x-show="errors.password"
+                  x-text="errors.password"
+                  class="text-sm font-medium text-red-500 mt-1 animate-in slide-in-from-top-1 fade-in duration-200"
+                ></p>
+                <p class="text-[0.8rem] text-muted-foreground">
+                  Mínimo de 6 caracteres.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-4 border-t pt-6 mt-6">
+              <button
+                type="button"
+                class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                @click="resetForm()"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-all hover:bg-primary/90 hover:shadow-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                :disabled="loading"
+              >
+                <span x-show="loading" class="mr-2">
+                  <svg
+                    class="animate-spin h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                </span>
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function profilePage() {
+    return {
+      initialForm: {
+        name: "{{ .User.Name }}",
+        email: "{{ .User.Email }}",
+      },
+      initialProfile: {
+        role: "",
+        enabled: false,
+      },
+      form: {
+        name: "{{ .User.Name }}",
+        email: "{{ .User.Email }}",
+        password: "",
+      },
+      profile: {
+        role: "",
+        enabled: false,
+      },
+      loading: false,
+      errors: {
+        email: "",
+        password: "",
+      },
+      toast: {
+        show: false,
+        message: "",
+        type: "success",
+      },
+      initialized: false,
+      getInitials(name) {
+        if (!name) return "U";
+        return name
+          .split(" ")
+          .map((n) => n[0])
+          .slice(0, 2)
+          .join("")
+          .toUpperCase();
+      },
+      roleToId(role) {
+        switch ((role || "").toUpperCase()) {
+          case "CUSTOMER":
+            return 1;
+          case "MANAGER":
+            return 2;
+          case "ADMIN":
+            return 3;
+          case "DEV":
+            return 4;
+          default:
+            return 1;
+        }
+      },
+      showToast(message, type = "success") {
+        this.toast.message = message;
+        this.toast.type = type;
+        this.toast.show = true;
+        setTimeout(() => {
+          this.toast.show = false;
+        }, 3000);
+      },
+      init() {
+        if (this.initialized) {
+          return;
+        }
+        this.initialized = true;
+        this.loadProfile();
+      },
+      async loadProfile() {
+        this.loading = true;
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const res = await fetch("/api/users/{{ .User.ID }}", {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const errorMsg = data.error || "Erro ao carregar perfil";
+            this.showToast(errorMsg, "error");
+            return;
+          }
+          const data = await res.json();
+          this.form.name = data.name || this.form.name;
+          this.form.email = data.email || this.form.email;
+          this.profile.role = data.role || this.profile.role;
+          this.profile.enabled =
+            typeof data.enabled !== "undefined"
+              ? Boolean(data.enabled)
+              : this.profile.enabled;
+          this.initialForm = {
+            name: this.form.name,
+            email: this.form.email,
+          };
+          this.initialProfile = {
+            role: this.profile.role,
+            enabled: this.profile.enabled,
+          };
+        } catch (e) {
+          this.showToast("Erro de conexão. Tente novamente.", "error");
+        } finally {
+          this.loading = false;
+        }
+      },
+      resetForm() {
+        this.form = {
+          name: this.initialForm.name,
+          email: this.initialForm.email,
+          password: "",
+        };
+        this.profile = {
+          role: this.initialProfile.role,
+          enabled: this.initialProfile.enabled,
+        };
+        this.errors = { email: "", password: "" };
+      },
+      async updateProfile() {
+        this.loading = true;
+        this.errors = { email: "", password: "" };
+
+        const payload = {
+          name: this.form.name,
+          email: this.form.email,
+        };
+
+        if (this.form.password) {
+          payload.password = this.form.password;
+        }
+
+        try {
+          const res = await fetch("/api/users/{{ .User.ID }}", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": "{{ .csrf }}",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const errorMsg = data.error || "Erro ao atualizar perfil";
+            if (data.errors && typeof data.errors === "object") {
+              Object.entries(data.errors).forEach(([field, message]) => {
+                const normalized = String(field || "").toLowerCase();
+                if (normalized === "email")
+                  this.errors.email = String(message || "");
+                if (normalized === "password")
+                  this.errors.password = String(message || "");
+              });
+              if (!this.errors.email && !this.errors.password) {
+                this.showToast(errorMsg, "error");
+              }
+              return;
+            }
+            if (typeof data.error === "string") {
+              const lower = data.error.toLowerCase();
+              if (lower.includes("email")) {
+                this.errors.email = data.error;
+                return;
+              }
+              if (lower.includes("senha") || lower.includes("password")) {
+                this.errors.password = data.error;
+                return;
+              }
+            }
+            this.showToast(errorMsg, "error");
+            return;
+          }
+
+          const data = await res.json();
+          this.showToast("Perfil atualizado com sucesso!", "success");
+          // Update form with returned data
+          this.form.name = data.name || this.form.name;
+          this.form.email = data.email || this.form.email;
+          this.form.password = "";
+          this.profile.role = data.role || this.profile.role;
+          this.profile.enabled =
+            typeof data.enabled !== "undefined"
+              ? Boolean(data.enabled)
+              : this.profile.enabled;
+          this.initialForm = {
+            name: this.form.name,
+            email: this.form.email,
+          };
+          this.initialProfile = {
+            role: this.profile.role,
+            enabled: this.profile.enabled,
+          };
+        } catch (e) {
+          console.error(e);
+          this.showToast("Erro de conexão. Tente novamente.", "error");
+        } finally {
+          this.loading = false;
+        }
+      },
+    };
+  }
+</script>
+{{ end }}
