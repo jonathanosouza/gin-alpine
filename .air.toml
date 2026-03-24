@@ -6,7 +6,7 @@ tmp_dir = "./project/out"
 
 [build]
   args_bin = []
-  cmd = "rm -f ./project/out/_main && GOOS=darwin CGO_ENABLED=1 GOARCH=arm64 go build -o ./project/out/_main ./project/src/services/main/cmd/*.go"
+  cmd = "rm -f ./project/out/_main && go build -o ./project/out/_main ./project/src/services/main/cmd/*.go"
   delay = 1000
   entrypoint = ["./project/out/_main"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "node_modules"]

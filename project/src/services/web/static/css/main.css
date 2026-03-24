@@ -2,6 +2,7 @@
 
 @source "./project/src/services/web/templates";
 @source "./project/src/services/web/static/js";
+@source "./project/src/services/web/ui/src";
 
 @import "./components/extra.css";
 

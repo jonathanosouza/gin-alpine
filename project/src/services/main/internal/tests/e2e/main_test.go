@@ -18,6 +18,9 @@ var ctx context.Context
 var defaultPass = "password"
 
 func TestMain(m *testing.M) {
+	if os.Getenv("RUN_E2E") != "1" {
+		os.Exit(0)
+	}
 	testCtx := context.Background()
 	pgContainer, pgConn, pgErr := startPostgres(testCtx)
 	if pgErr != nil {

@@ -14,9 +14,20 @@ func TestConfig(t *testing.T) {
 		log.Println("Deferred tearing down.")
 	}()
 
+	setRequired := func(t *testing.T) {
+		t.Setenv("AVAILABLE_API_KEYS", "test_key")
+		t.Setenv("REDIS_URL", "localhost:6379")
+		t.Setenv("GOOSE_DBSTRING", "postgres://user:pass@localhost:5432/db?sslmode=disable")
+		t.Setenv("EMAIL_SENDER", "no-reply@example.com")
+		t.Setenv("EMAIL_SENDER_PASS", "pass")
+		t.Setenv("EMAIL_SMTP", "smtp.example.com")
+		t.Setenv("SMTP_ADDRESS", "smtp.example.com:587")
+	}
+
 	t.Run("test success load", func(t *testing.T) {
 		t.Setenv("ENV", "test")
 		t.Setenv("HTTP_PORT", "8080")
+		setRequired(t)
 		cfg, err := LoadConfig()
 		assert.NoError(t, err)
 		assert.NotNil(t, cfg)
@@ -27,6 +38,7 @@ func TestConfig(t *testing.T) {
 	t.Run("test fail missing env but got default", func(t *testing.T) {
 		t.Setenv("ENV", "")
 		t.Setenv("HTTP_PORT", "8080")
+		setRequired(t)
 		cfg, err := LoadConfig()
 		assert.Nil(t, err)
 		assert.NotNil(t, cfg)
@@ -36,6 +48,7 @@ func TestConfig(t *testing.T) {
 	t.Run("test fail missing http port", func(t *testing.T) {
 		t.Setenv("ENV", "test")
 		t.Setenv("HTTP_PORT", "")
+		setRequired(t)
 		cfg, err := LoadConfig()
 		assert.Error(t, err)
 		assert.Nil(t, cfg)

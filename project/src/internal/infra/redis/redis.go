@@ -49,8 +49,11 @@ func (r *RedisClient) Get(ctx context.Context, key string) string {
 func (r *RedisClient) ClearGroup(ctx context.Context, group string) error {
 	var groupRoutes map[string]string
 	err := r.Cache.Get(ctx, group, &groupRoutes)
-	if err != nil {
+	if err != nil && err != cache.ErrCacheMiss {
 		return err
+	}
+	if err == cache.ErrCacheMiss {
+		return nil
 	}
 	if len(groupRoutes) == 0 {
 		return nil
@@ -67,8 +70,11 @@ func (r *RedisClient) ClearGroup(ctx context.Context, group string) error {
 func (r *RedisClient) SetCachedRoute(ctx context.Context, group string, route string, ttl time.Duration) error {
 	var groupRoutes map[string]string
 	err := r.Cache.Get(ctx, group, &groupRoutes)
-	if err != nil {
+	if err != nil && err != cache.ErrCacheMiss {
 		return err
+	}
+	if err == cache.ErrCacheMiss {
+		groupRoutes = make(map[string]string)
 	}
 	if len(groupRoutes) == 0 {
 		groupRoutes = make(map[string]string)

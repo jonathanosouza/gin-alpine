@@ -26,6 +26,9 @@ var baseLayoutComponents = []string{
 //go:embed static/*
 var StaticFiles embed.FS
 
+//go:embed static/**
+var StaticFilesAll embed.FS
+
 //go:embed templates/**/*.html
 var TemplateFS embed.FS
 

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 
 	"gin-alpine/src/services/main/internal/bootstrap"
@@ -19,6 +20,15 @@ var ipLimiter sync.Map
 // burst: max number of events happening at once
 func RateLimitMiddleware(b *bootstrap.Bootstrap) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if path == "/favicon.ico" || len(path) >= 7 && path[:7] == "/static" {
+			c.Next()
+			return
+		}
+		if path == "/api/context" || !strings.HasPrefix(path, "/api") {
+			c.Next()
+			return
+		}
 		limiter := handleGetLimiter(c.Request, b)
 
 		if limiter != nil && !limiter.Allow() {

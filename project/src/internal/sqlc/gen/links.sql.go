@@ -14,9 +14,9 @@ import (
 
 const checkIfUserHasResetPasswordLinksAvailable = `-- name: CheckIfUserHasResetPasswordLinksAvailable :one
 select ual.link_uuid
-from public.users u
-    left join public.user_available_links ual on ual.user_id = u.id
-    left join public.links l on l.uuid = ual.link_uuid
+from users u
+    left join user_available_links ual on ual.user_id = u.id
+    left join links l on l.uuid = ual.link_uuid
 where 1 = 1
     and ual."type" = 'RESET_PASS'
     and l.deleted_at is null
@@ -38,7 +38,7 @@ func (q *Queries) CheckIfUserHasResetPasswordLinksAvailable(ctx context.Context,
 }
 
 const createLink = `-- name: CreateLink :one
-insert into public.links (data, expires_at, uuid)
+insert into links (data, expires_at, uuid)
 values ($1, $2, $3)
 returning id
 `
@@ -57,7 +57,7 @@ func (q *Queries) CreateLink(ctx context.Context, arg CreateLinkParams) (int32, 
 }
 
 const createUserAvailableLinks = `-- name: CreateUserAvailableLinks :one
-insert into public.user_available_links (user_id, link_uuid, type)
+insert into user_available_links (user_id, link_uuid, type)
 values ($1, $2, $3)
 returning id
 `
@@ -76,7 +76,7 @@ func (q *Queries) CreateUserAvailableLinks(ctx context.Context, arg CreateUserAv
 }
 
 const deleteLink = `-- name: DeleteLink :exec
-update public.links
+update links
 set deleted_at = $2
 where id = $1
 `
@@ -98,7 +98,7 @@ SELECT l.id,
     l.expires_at,
     l.created_at,
     l.updated_at
-FROM public.links l
+FROM links l
 WHERE 1 = 1
     AND l.uuid = $1
     AND l.deleted_at is null

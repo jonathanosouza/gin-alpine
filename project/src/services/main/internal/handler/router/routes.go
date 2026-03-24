@@ -2,10 +2,14 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"gin-alpine/src/internal/domain/auth"
+	"gin-alpine/src/pkg/utils"
 	"gin-alpine/src/services/main/internal/bootstrap"
 	"gin-alpine/src/services/main/internal/handler/middleware"
 
@@ -29,13 +33,15 @@ type ChartData struct {
 func NewRouter(b *bootstrap.Bootstrap) *gin.Engine {
 	gin.SetMode(b.Config.Env)
 	r := gin.New()
+	r.RedirectTrailingSlash = true
+	r.RedirectFixedPath = true
 
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5174"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-API-Key"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-API-Key", "X-CSRF-Token", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -65,17 +71,78 @@ func NewRouter(b *bootstrap.Bootstrap) *gin.Engine {
 		r.Use(middleware.CSRFTpl())
 	}
 
-	staticFS, err := fs.Sub(web.StaticFiles, "static")
-	if err != nil {
-		log.Fatalf("error creating static sub filesystem: %v", err)
+	var staticFS fs.FS
+	if b.Config.Env == gin.ReleaseMode {
+		embedSub, err := fs.Sub(web.StaticFilesAll, "static")
+		if err != nil {
+			log.Fatalf("error creating static sub filesystem: %v", err)
+		}
+		staticFS = embedSub
+	} else {
+		staticPath, err := utils.GetFilePath([]string{"src", "services", "web", "static"})
+		if err != nil {
+			log.Fatalf("error getting static path: %v", err)
+		}
+		staticFS = os.DirFS(staticPath)
 	}
+
 	r.StaticFS("/static", http.FS(staticFS))
 
 	r.GET("/favicon.ico", func(c *gin.Context) {
-		c.FileFromFS("static/favicon.ico", http.FS(staticFS))
+		c.FileFromFS("favicon.ico", http.FS(staticFS))
+	})
+	r.GET("/logo4.png", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		c.File("logo4.png")
+	})
+
+	serveVueIndex := func(c *gin.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		data, err := fs.ReadFile(staticFS, "vue/index.html")
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+		if b.Config.Env != gin.TestMode {
+			token := csrf.GetToken(c)
+			if token != "" {
+				html := string(data)
+				if !strings.Contains(html, `meta name="csrf-token"`) {
+					meta := fmt.Sprintf(`<meta name="csrf-token" content="%s" />`, token)
+					if strings.Contains(html, "</head>") {
+						html = strings.Replace(html, "</head>", meta+"\n  </head>", 1)
+					} else {
+						html = meta + "\n" + html
+					}
+					data = []byte(html)
+				}
+			}
+		}
+		c.Status(http.StatusOK)
+		_, _ = c.Writer.Write(data)
+	}
+
+	// force-serve SPA index for known shell routes to avoid any implicit redirects
+	r.Use(func(c *gin.Context) {
+		if c.Request.Method == http.MethodGet {
+			p := c.Request.URL.Path
+			if p == "/" || p == "/login" || p == "/configuracoes" || p == "/perfil" {
+				serveVueIndex(c)
+				c.Abort()
+				return
+			}
+		}
+		c.Next()
 	})
 
 	r.NoRoute(func(c *gin.Context) {
+		if c.Request.Method == http.MethodGet {
+			path := c.Request.URL.Path
+			if !strings.HasPrefix(path, "/api") && !strings.HasPrefix(path, "/static") && path != "/favicon.ico" {
+				serveVueIndex(c)
+				return
+			}
+		}
 		if err := b.Renderer.Render(c.Writer, "base", "404", gin.H{
 			"Title": "Page not found",
 		}); err != nil {
@@ -92,29 +159,73 @@ func NewRouter(b *bootstrap.Bootstrap) *gin.Engine {
 	}))
 
 	// PUBLIC ROUTES
-	public := r.Group("/")
-	public.GET("/login", b.Renderer.Page("auth", "login", func(c *gin.Context) gin.H {
-		return gin.H{"Title": "Login"}
-	}))
+	public := r.Group("")
+	public.GET("/api/context", func(c *gin.Context) {
+		csrfToken := csrf.GetToken(c)
+		res := gin.H{
+			"csrf":    csrfToken,
+			"env":     b.Config.Env,
+			"AppData": nil,
+			"User":    nil,
+			"Can": gin.H{
+				"Customer": false,
+				"Manager":  false,
+				"Admin":    false,
+				"Dev":      false,
+			},
+			"IsAuth": false,
+		}
+
+		session := sessions.Default(c)
+		userID := session.Get("user_id")
+		if userID == nil {
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		key := fmt.Sprintf("auth:user:%v", userID)
+		var user auth.UserAuth
+		var appData utils.AppData
+		errUser := b.RedisDB.Cache.Get(c.Request.Context(), key, &user)
+		errAppData := b.RedisDB.Cache.Get(c.Request.Context(), b.RedisDB.GetAppDataKey(), &appData)
+		if errUser != nil || errAppData != nil {
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		res["AppData"] = appData
+		res["User"] = gin.H{
+			"ID":    user.ID,
+			"Name":  user.Name,
+			"Email": user.Email,
+			"Role":  user.Role,
+		}
+		res["IsAuth"] = true
+		res["Can"] = gin.H{
+			"Customer": user.Role >= auth.RoleCustomer,
+			"Manager":  user.Role >= auth.RoleManager,
+			"Admin":    user.Role >= auth.RoleAdmin,
+			"Dev":      user.Role >= auth.RoleDev,
+		}
+
+		c.JSON(http.StatusOK, res)
+	})
+
+	public.GET("/login", serveVueIndex)
 	public.POST("/login", b.AuthWebHandler.LoginPostWeb)
-	public.GET("/recuperar-senha", b.AuthWebHandler.ForgotPasswordGet)
+	public.GET("/recuperar-senha", serveVueIndex)
 	public.POST("/recuperar-senha", b.AuthWebHandler.ForgotPasswordPost)
-	public.GET("/reset-senha/:uuid", b.AuthWebHandler.ResetPasswordGet)
+	public.GET("/reset-senha/:uuid", serveVueIndex)
 	public.POST("/reset-senha/:uuid", b.AuthWebHandler.ResetPasswordPost)
 
 	// PROTECTED ROUTES
-	protected := r.Group("/")
+	protected := r.Group("")
 	protected.Use(middleware.AuthWeb(b.RedisDB))
 	protected.POST("/logout", b.AuthWebHandler.LogoutPostWeb)
-	protected.GET("/", b.Renderer.Page("main", "home", func(c *gin.Context) gin.H {
-		return gin.H{"Title": "Home"}
-	}))
-	protected.GET("/configuracoes", b.Renderer.Page("main", "configuracoes", func(c *gin.Context) gin.H {
-		return gin.H{"Title": "Configurações"}
-	}))
-	protected.GET("/perfil", b.Renderer.Page("main", "perfil", func(c *gin.Context) gin.H {
-		return gin.H{"Title": "Perfil"}
-	}))
+	// handle root explicitly
+	protected.GET("/", serveVueIndex)
+	protected.GET("/configuracoes", serveVueIndex)
+	protected.GET("/perfil", serveVueIndex)
 	protected.PUT("/api/users/:id", b.UserWebHandler.UpdateUser)
 	protected.GET("/api/users/:id", b.UserWebHandler.GetUser)
 	protected.GET("/api/users", b.UserWebHandler.ListUsers)

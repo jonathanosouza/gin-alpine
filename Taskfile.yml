@@ -7,7 +7,7 @@ dotenv: ['.env', '.env.test']
 #===================##===================##===================##===================##===================##===================##===================##===================#
 
 vars:
-  ENV_DEV: .env
+  ENV_DEV: .env.dev
   ENV_TEST: .env.test
   BIN_MAIN: _main
   BIN_NOTIF: _notifications
@@ -54,14 +54,12 @@ tasks:
     desc: Build main project executable
     cmds:
       - |
-        GOOS=darwin CGO_ENABLED=1 GOARCH=arm64 \
         go build -o ./project/out/{{.BIN_MAIN}} project/src/services/main/cmd/*.go
 
   build-worker:
     desc: Build worker project executable
     cmds:
       - |
-        GOOS=darwin CGO_ENABLED=1 GOARCH=arm64 \
         go build -o ./project/out/{{.BIN_NOTIF}} project/src/services/worker/cmd/*.go
 
   clean:
@@ -143,6 +141,19 @@ tasks:
     desc: Run the project with hot reload in dev mode
     cmds:
       - pnpm run dev:css &
+      - go tool air -c .air.toml
+
+  dev:all:
+    desc: Start Redis (and optional DB) and run dev server
+    cmds:
+      - task start-redis
+      - go tool air -c .air.toml
+
+  dev:all:localdb:
+    desc: Start Postgres + Redis and run dev server
+    cmds:
+      - task start-db
+      - task start-redis
       - go tool air -c .air.toml
 
 

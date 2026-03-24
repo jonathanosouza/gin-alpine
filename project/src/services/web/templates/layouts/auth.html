@@ -6,7 +6,27 @@
     <title>{{ .Title }}</title>
     <link rel="icon" href="/static/favicon.ico" />
     <link rel="stylesheet" href="/static/css/styles.css" />
-    <script defer src="/static/js/alpine.min.js"></script>
+    {{ if .csrf }}<meta name="csrf-token" content="{{ .csrf }}" />{{ end }}
+    <script>
+      window.__APP_CONTEXT__ = {
+        csrf: "{{ .csrf }}",
+        env: "{{ .env }}",
+        Title: "{{ .Title }}",
+        error: "{{ .error }}",
+        success: "{{ .success }}",
+        link_uuid: "{{ .link_uuid }}",
+        IsAuth: {{ if .IsAuth }}true{{ else }}false{{ end }},
+        AppData: {{ if .AppData }}{ SystemLastUpdate: "{{ .AppData.SystemLastUpdate }}" }{{ else }}null{{ end }},
+        User: {{ if .User }}{ ID: {{ .User.ID }}, Name: "{{ .User.Name }}", Email: "{{ .User.Email }}", Role: {{ .User.Role }} }{{ else }}null{{ end }},
+        Can: {
+          Customer: {{ if .Can.Customer }}true{{ else }}false{{ end }},
+          Manager: {{ if .Can.Manager }}true{{ else }}false{{ end }},
+          Admin: {{ if .Can.Admin }}true{{ else }}false{{ end }},
+          Dev: {{ if .Can.Dev }}true{{ else }}false{{ end }}
+        }
+      };
+    </script>
+    <script type="module" src="/static/vue/app.js"></script>
   </head>
 
   <body class="bg-zinc-100 min-h-screen flex items-center justify-center">

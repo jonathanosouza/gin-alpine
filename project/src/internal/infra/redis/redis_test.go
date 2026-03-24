@@ -18,7 +18,10 @@ func TestRedis(t *testing.T) {
 		log.Println("Deferred tearing down.")
 	}()
 
-	cfg, _ := configs.LoadConfig()
+	cfg, err := configs.LoadConfig()
+	if err != nil || cfg == nil || cfg.RedisURL == "" {
+		t.Skip("redis config not available")
+	}
 	var rClient *RedisClient = nil
 
 	t.Run("should validate config object", func(t *testing.T) {

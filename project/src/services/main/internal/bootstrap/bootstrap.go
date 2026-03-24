@@ -3,6 +3,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"gin-alpine/src/internal/configs"
 	"gin-alpine/src/pkg/utils"
 	"gin-alpine/src/services/web"
@@ -10,8 +11,11 @@ import (
 	"runtime"
 	"time"
 
+	authDomain "gin-alpine/src/internal/domain/auth"
+	userDomain "gin-alpine/src/internal/domain/users"
 	"gin-alpine/src/internal/infra/postgres"
 	"gin-alpine/src/internal/infra/redis"
+	"gin-alpine/src/internal/sqlc/gen"
 	"gin-alpine/src/internal/usecases"
 	authWebHandler "gin-alpine/src/services/main/internal/handler/web/auth"
 	webHandler "gin-alpine/src/services/main/internal/handler/web/user"
@@ -40,6 +44,8 @@ type Bootstrap struct {
 	RollingLogger  *lumberjack.Logger
 	AuthWebHandler *authWebHandler.AuthHandler
 	UserWebHandler *webHandler.UserHandler
+	AuthUsecases   *usecases.AuthUsecases
+	UserUsecase    *usecases.UserUsecase
 }
 
 func MustGetBootstrapInstance() *Bootstrap {
@@ -94,6 +100,8 @@ func MustGetBootstrapInstance() *Bootstrap {
 	// set bootstrap handlers
 	b.AuthWebHandler = authHandler
 	b.UserWebHandler = userHandler
+	b.AuthUsecases = authUsecases
+	b.UserUsecase = userUsecase
 
 	return &b
 }
@@ -170,5 +178,15 @@ func (b *Bootstrap) SetInitialData() {
 	})
 	if err != nil {
 		utils.FatalResult("error caching inital data", err)
+	}
+
+	_, err = b.UserUsecase.CreateUser(ctx, gen.CreateUserParams{
+		Name:     "Admin",
+		Email:    b.Config.AdminEmail,
+		Password: b.Config.AdminPass,
+		RoleID:   int32(authDomain.RoleAdmin),
+	})
+	if err != nil && !errors.Is(err, userDomain.ErrUserEmailAlreadyExists) {
+		b.Logger.Error("error creating admin user", zap.Error(err))
 	}
 }
