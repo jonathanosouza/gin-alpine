@@ -12,11 +12,16 @@
         :class="sidebarOpen ? 'translate-x-0' : ''"
       >
         <div class="flex h-16 items-center justify-center border-b border-border px-2">
-          <img :src="logoSrc" alt="Logo" class="h-10 w-auto object-contain" style="filter:none;mix-blend-mode:normal" />
+          <RouterLink to="/" class="inline-flex items-center">
+            <img :src="logoSrc" alt="Logo" class="h-10 w-auto object-contain" style="filter:none;mix-blend-mode:normal" />
+          </RouterLink>
         </div>
 
         <div class="px-3 py-4">
           <nav class="space-y-2">
+            <RouterLink to="/visao-geral" class="block rounded-lg px-3 py-2 text-sm font-semibold">
+              Visão Geral
+            </RouterLink>
             <button
               type="button"
               class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold"
@@ -37,17 +42,17 @@
             </button>
             <div v-show="openComercial" class="space-y-1 pl-9">
               <RouterLink
-                to="/comercial"
+                to="/comercial/vendedor"
                 class="block rounded-lg px-3 py-2 text-sm"
               >
                 Vendas Vendedor
               </RouterLink>
-              <RouterLink to="/comercial" class="block rounded-lg px-3 py-2 text-sm">Vendas Cliente</RouterLink>
-              <RouterLink to="/comercial" class="block rounded-lg px-3 py-2 text-sm">Vendas Fornecedor</RouterLink>
-              <RouterLink to="/comercial" class="block rounded-lg px-3 py-2 text-sm">Real x Meta</RouterLink>
-              <RouterLink to="/comercial" class="block rounded-lg px-3 py-2 text-sm">Vendas por Período</RouterLink>
-              <RouterLink to="/comercial" class="block rounded-lg px-3 py-2 text-sm">Crescimento Ano</RouterLink>
-              <RouterLink to="/comercial" class="block rounded-lg px-3 py-2 text-sm">Evolução Vendedor</RouterLink>
+              <RouterLink to="/comercial/cliente" class="block rounded-lg px-3 py-2 text-sm">Vendas Cliente</RouterLink>
+              <RouterLink to="/comercial/fornecedor" class="block rounded-lg px-3 py-2 text-sm">Vendas Fornecedor</RouterLink>
+              <RouterLink to="/comercial/real-meta" class="block rounded-lg px-3 py-2 text-sm">Real x Meta</RouterLink>
+              <RouterLink to="/comercial/vendas-periodo" class="block rounded-lg px-3 py-2 text-sm">Vendas por Período</RouterLink>
+              <RouterLink to="/comercial/crescimento-ano" class="block rounded-lg px-3 py-2 text-sm">Crescimento Ano</RouterLink>
+              <RouterLink to="/comercial/evolucao-vendedor" class="block rounded-lg px-3 py-2 text-sm">Evolução Vendedor</RouterLink>
             </div>
 
             <button
@@ -68,14 +73,9 @@
               </svg>
             </button>
             <div v-show="openLogistica" class="space-y-1 pl-9">
-              <RouterLink
-                to="/logistica"
-                class="block rounded-lg px-3 py-2 text-sm"
-              >
-                Estoque
-              </RouterLink>
-              <RouterLink to="/logistica" class="block rounded-lg px-3 py-2 text-sm">Sugestão de Compras</RouterLink>
-              <RouterLink to="/logistica" class="block rounded-lg px-3 py-2 text-sm">Curva ABC</RouterLink>
+              <RouterLink to="/logistica/estoque" class="block rounded-lg px-3 py-2 text-sm">Estoque</RouterLink>
+              <RouterLink to="/logistica/sugestao-compras" class="block rounded-lg px-3 py-2 text-sm">Sugestão de Compras</RouterLink>
+              <RouterLink to="/logistica/curva-abc" class="block rounded-lg px-3 py-2 text-sm">Curva ABC</RouterLink>
             </div>
 
             <button
@@ -96,15 +96,10 @@
               </svg>
             </button>
             <div v-show="openFinanceiro" class="space-y-1 pl-9">
-              <RouterLink
-                to="/financeiro"
-                class="block rounded-lg px-3 py-2 text-sm"
-              >
-                Contas a Pagar
-              </RouterLink>
-              <RouterLink to="/financeiro" class="block rounded-lg px-3 py-2 text-sm">Contas a Receber</RouterLink>
-              <RouterLink to="/financeiro" class="block rounded-lg px-3 py-2 text-sm">Fluxo de Caixa</RouterLink>
-              <RouterLink to="/financeiro" class="block rounded-lg px-3 py-2 text-sm">DRE</RouterLink>
+              <RouterLink to="/financeiro/contas-pagar" class="block rounded-lg px-3 py-2 text-sm">Contas a Pagar</RouterLink>
+              <RouterLink to="/financeiro/contas-receber" class="block rounded-lg px-3 py-2 text-sm">Contas a Receber</RouterLink>
+              <RouterLink to="/financeiro/fluxo-caixa" class="block rounded-lg px-3 py-2 text-sm">Fluxo de Caixa</RouterLink>
+              <RouterLink to="/financeiro/dre" class="block rounded-lg px-3 py-2 text-sm">DRE</RouterLink>
             </div>
 
             <button

@@ -4,10 +4,12 @@ package configs
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gin-alpine/src/pkg/utils"
 
+	"github.com/joho/godotenv"
 	"golang.org/x/time/rate"
 )
 
@@ -29,6 +31,16 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	env := utils.GetEnvDefault("ENV", "development")
+	if env == "development" {
+		_ = godotenv.Load(".env.dev")
+		_ = godotenv.Load(filepath.Join("..", ".env.dev"))
+		_ = godotenv.Load(".env")
+		_ = godotenv.Load(filepath.Join("..", ".env"))
+	}
+	if env == "test" {
+		_ = godotenv.Load(".env.test")
+		_ = godotenv.Load(filepath.Join("..", ".env.test"))
+	}
 
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {

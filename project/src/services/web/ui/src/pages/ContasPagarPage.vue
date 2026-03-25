@@ -3,8 +3,8 @@
     <div class="space-y-5">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Visão Geral</h1>
-          <p class="text-sm text-muted-foreground">Área principal do Comercial.</p>
+          <h1 class="text-2xl font-bold tracking-tight">Contas a Pagar</h1>
+          <p class="text-sm text-muted-foreground">Miolo em branco para os módulos.</p>
         </div>
       </div>
       <div class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
